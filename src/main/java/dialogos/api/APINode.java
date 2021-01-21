@@ -40,6 +40,11 @@ public class APINode extends Node
     @Override
     public Node execute(WozInterface wozInterface, InputCenter input, ExecutionLogger logger)
     {
+        REQUEST = (String) properties.get("request");
+        REQUESTTYPE = (String) properties.get("requestTypes");
+        RESPONSETYPE = (String) properties.get("responseTypes");
+        RETURNVARIABLE = (String) properties.get("returnVariable");
+
         executeAPI();
 
         Node target = this.getEdge(0).getTarget();
@@ -274,11 +279,6 @@ public class APINode extends Node
                     this.setProperty(key, props.get(key));
                 }
             }
-
-            REQUEST = (String) properties.get("request");
-            REQUESTTYPE = (String) properties.get("requestTypes");
-            RESPONSETYPE = (String) properties.get("responseTypes");
-            RETURNVARIABLE = (String) properties.get("returnVariable");
 
             this.properties.keySet().removeIf(key -> !props.containsKey(key));
 
