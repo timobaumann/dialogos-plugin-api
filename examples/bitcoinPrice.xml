@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wizard SYSTEM "Wizard.dtd">
+
+<wizard>
+	<plugin type="dialogos-plugin-api">
+	</plugin>
+	<plugin type="dialogos.plugin.tts">
+	</plugin>
+	<graph directed="1" Graphic="1" Layout="points">
+		<att name="width" type="integer" value="750"/>
+		<att name="height" type="integer" value="540"/>
+		<groovyFunctions></groovyFunctions>
+		<variable uid="9fe3cb45-4a6b-4cff-8470-2a83f3d060c2">
+			<name>apiresult</name>
+			<type>struct</type>
+			<value>undefined</value>
+		</variable>
+		<variable uid="d2dc7651-8e53-44f7-95c2-7be10e4b9545">
+			<name>btceur</name>
+			<type>int</type>
+			<value>undefined</value>
+		</variable>
+		<node uid="2de0f75a-5ccd-44de-b69a-41fa3039ac33" class="de.saar.coli.dialogos.marytts.plugin.TTSNode">
+			<graphics x="336" y="266" fill="#00b200"/>
+			<att name="title" type="string" value="Speech synthesis"/>
+			<att name="voice" type="string" value="dfki-pavoque-neutral-hsmm"/>
+			<att name="prompt" type="text">
+				<value>&quot;Ein bitcoin ist &quot; + btceur + &quot;euro wert&quot;</value>
+			</att>
+			<att name="prompt_type" type="string" value="expression"/>
+			<att name="wait" type="boolean" value="1"/>
+			<att name="await_silence" type="boolean" value="0"/>
+		</node>
+		<node uid="5450b928-4c9a-48b2-9673-f0ae488b10bd" class="dialogos.api.APINode">
+			<graphics x="370" y="128" fill="#006fde"/>
+			<att name="title" type="string" value="API"/>
+			<att name="request" type="string" value="https://api.cryptonator.com/api/ticker/btc-eur"/>
+			<att name="requestTypes" type="string" value="Plain Text"/>
+			<att name="responseTypes" type="string" value="JSON"/>
+			<att name="returnVariable" type="string" value="apiresult"/>
+		</node>
+		<node uid="8a25e94b-c239-44f2-9063-3b15d6732593" class="com.clt.diamant.graph.nodes.EndNode">
+			<graphics x="369" y="372" fill="#9999ff"/>
+			<att name="title" type="string" value="End"/>
+		</node>
+		<node uid="b156ba92-0f74-4795-96e4-b90a4458cd17" class="com.clt.diamant.graph.nodes.ScriptNode">
+			<graphics x="369" y="197" fill="#99ffff"/>
+			<att name="title" type="string" value="Script"/>
+			<att name="script" type="text">
+				<value>struct ticker = get(apiresult, &quot;ticker&quot;);
+btceur = round(parseReal(get(ticker, &quot;price&quot;)));</value>
+			</att>
+		</node>
+		<node uid="f752e21b-a8dc-4b4e-a8a0-f759c4db7e72" class="com.clt.diamant.graph.nodes.StartNode">
+			<graphics x="370" y="40" fill="#9999ff"/>
+			<att name="title" type="string" value="Start"/>
+		</node>
+		<edge src="2de0f75a-5ccd-44de-b69a-41fa3039ac33" tgt="8a25e94b-c239-44f2-9063-3b15d6732593">
+		</edge>
+		<edge src="5450b928-4c9a-48b2-9673-f0ae488b10bd" tgt="b156ba92-0f74-4795-96e4-b90a4458cd17">
+		</edge>
+		<edge src="b156ba92-0f74-4795-96e4-b90a4458cd17" tgt="2de0f75a-5ccd-44de-b69a-41fa3039ac33">
+		</edge>
+		<edge src="f752e21b-a8dc-4b4e-a8a0-f759c4db7e72" tgt="5450b928-4c9a-48b2-9673-f0ae488b10bd">
+		</edge>
+	</graph>
+</wizard>
