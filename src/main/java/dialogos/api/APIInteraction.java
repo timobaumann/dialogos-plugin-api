@@ -1,5 +1,7 @@
 package dialogos.api;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
@@ -10,12 +12,19 @@ import java.net.URLConnection;
 
 public class APIInteraction
 {
-    public static JSONObject getJSON(String apiRequest)
+    public static Object getJSON(String apiRequest)
     {
         try
         {
-            download(apiRequest);
-            return new JSONObject(new String(download(apiRequest)));
+            String load = new String(download(apiRequest));
+            if (isJSONObjectValid(load))
+            {
+                return new JSONObject(load);
+            }
+            if (isJSONArrayValid(load))
+            {
+                return new JSONArray(load);
+            }
         } catch (IOException exp)
         {
             exp.printStackTrace();
@@ -50,6 +59,30 @@ public class APIInteraction
         in.close();
 
         return data;
+    }
+
+    private static boolean isJSONObjectValid(String jsonString)
+    {
+        try
+        {
+            new JSONObject(jsonString);
+        } catch (JSONException ex)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isJSONArrayValid(String jsonString)
+    {
+        try
+        {
+            new JSONArray(jsonString);
+        } catch (JSONException ex)
+        {
+            return false;
+        }
+        return true;
     }
 }
 

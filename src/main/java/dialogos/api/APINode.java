@@ -6,25 +6,32 @@ import com.clt.diamant.graph.Node;
 import com.clt.diamant.gui.NodePropertiesDialog;
 import com.clt.script.exp.Expression;
 import com.clt.script.exp.Value;
+import com.clt.script.exp.types.ListType;
 import com.clt.script.exp.types.StructType;
 import com.clt.xml.XMLReader;
 import com.clt.xml.XMLWriter;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 public class APINode extends Node
 {
-    private String RESPONSETYPE;
-    private String REQUESTTYPE;
-    private String REQUEST;
-    private String RETURNVARIABLE;
+    private String responsetypes;
+    private String requesttypes;
+    private String request;
+    private String returnvariable;
+
+    private final String REQUEST = "request";
+    private final String REQUEST_TYPES = "requestTypes";
+    private final String RESPONSE_TYPES = "responseTypes";
+    private final String RETURN_VARIABLE = "returnVariable";
+    private final String[] rTypes = new String[]{"JSON"};
 
     public APINode()
     {
@@ -40,10 +47,10 @@ public class APINode extends Node
     @Override
     public Node execute(WozInterface wozInterface, InputCenter input, ExecutionLogger logger)
     {
-        REQUEST = (String) properties.get("request");
-        REQUESTTYPE = (String) properties.get("requestTypes");
-        RESPONSETYPE = (String) properties.get("responseTypes");
-        RETURNVARIABLE = (String) properties.get("returnVariable");
+        request = (String) properties.get(REQUEST);
+        requesttypes = (String) properties.get(REQUEST_TYPES);
+        responsetypes = (String) properties.get(RESPONSE_TYPES);
+        returnvariable = (String) properties.get(RETURN_VARIABLE);
 
         executeAPI();
 
@@ -54,15 +61,26 @@ public class APINode extends Node
 
     private void executeAPI()
     {
-        JSONObject result = null;
+        Object result;
+
+        final List<Slot> vars = this.getGraph().getAllVariables(Graph.LOCAL);
+        Slot returnVar = null;
+        for (Slot slot : vars)
+        {
+            if (slot.getName().equals(returnvariable))
+            {
+                returnVar = slot;
+                break;
+            }
+        }
 
         try
         {
             String apiRequest = null;
 
-            if (REQUESTTYPE.equals("Expression"))
+            if (requesttypes.equals("Expression"))
             {
-                Expression expression = parseExpression(REQUEST);
+                Expression expression = parseExpression(request);
                 Value value = expression.evaluate();
                 if (value != null)
                 {
@@ -71,7 +89,7 @@ public class APINode extends Node
             }
             else
             {
-                apiRequest = REQUEST;
+                apiRequest = request;
             }
 
             if (apiRequest == null)
@@ -79,37 +97,35 @@ public class APINode extends Node
                 return;
             }
 
-            switch (RESPONSETYPE)
+            //
+            // Handle json api
+            //
+            if (responsetypes.equals(rTypes[0]))
             {
-                case "JSON":
-                    result = APIInteraction.getJSON(apiRequest);
-                    break;
-//                case "XML":
-//                    return;
-            }
+                result = APIInteraction.getJSON(apiRequest);
+                if (result == null || returnVar == null)
+                {
+                    return;
+                }
 
+                if (result instanceof JSONObject && returnVar.getType() instanceof StructType)
+                {
+                    returnVar.setValue(Value.fromJson((JSONObject) result));
+                }
+                else if (result instanceof JSONArray && returnVar.getType() instanceof ListType)
+                {
+                    returnVar.setValue(Value.fromJson((JSONArray) result));
+                }
+            }
+//            else if (responsetypes.equals(responseTypes[1]))
+//            {
+//                // Handle e.g. XML
+//            }
         } catch (Exception e)
         {
             e.printStackTrace();
         }
 
-        final List<Slot> vars = this.getGraph().getAllVariables(Graph.LOCAL);
-        Slot returnVar = null;
-        for (Slot slot : vars)
-        {
-            if (slot.getName().equals(RETURNVARIABLE))
-            {
-                returnVar = slot;
-                break;
-            }
-        }
-
-        if (result == null || returnVar == null)
-        {
-            return;
-        }
-
-        returnVar.setValue(Value.fromJson(result));
     }
 
     @Override
@@ -117,31 +133,31 @@ public class APINode extends Node
     {
         super.writeAttributes(out, uid_map);
 
-        REQUEST = (String) this.getProperty("request");
-        REQUESTTYPE = (String) this.getProperty("requestTypes");
-        RESPONSETYPE = (String) this.getProperty("responseTypes");
-        RETURNVARIABLE = (String) this.getProperty("returnVariable");
+        request = (String) this.getProperty(REQUEST);
+        requesttypes = (String) this.getProperty(REQUEST_TYPES);
+        responsetypes = (String) this.getProperty(RESPONSE_TYPES);
+        returnvariable = (String) this.getProperty(RETURN_VARIABLE);
 
-        if (REQUEST != null)
+        if (request != null)
         {
-            Graph.printAtt(out, "request", REQUEST);
+            Graph.printAtt(out, REQUEST, request);
         }
-        if (REQUESTTYPE != null)
+        if (requesttypes != null)
         {
-            Graph.printAtt(out, "requestTypes", REQUESTTYPE);
+            Graph.printAtt(out, REQUEST_TYPES, requesttypes);
         }
-        if (RESPONSETYPE != null)
+        if (responsetypes != null)
         {
-            Graph.printAtt(out, "responseTypes", RESPONSETYPE);
+            Graph.printAtt(out, RESPONSE_TYPES, responsetypes);
         }
-        if (RETURNVARIABLE != null)
+        if (returnvariable != null)
         {
-            Graph.printAtt(out, "returnVariable", RETURNVARIABLE);
+            Graph.printAtt(out, RETURN_VARIABLE, returnvariable);
         }
     }
 
     @Override
-    public void writeVoiceXML(XMLWriter w, IdMap uid_map) throws IOException
+    public void writeVoiceXML(XMLWriter w, IdMap uid_map)
     {
 
     }
@@ -151,10 +167,10 @@ public class APINode extends Node
     {
         switch (name)
         {
-            case "request":
-            case "requestTypes":
-            case "responseTypes":
-            case "returnVariable":
+            case REQUEST:
+            case REQUEST_TYPES:
+            case RESPONSE_TYPES:
+            case RETURN_VARIABLE:
                 this.setProperty(name, value);
                 break;
             default:
@@ -172,10 +188,10 @@ public class APINode extends Node
         JPanel inputPanel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
 
-        Component requestEditor = NodePropertiesDialog.createTextArea(properties, "request");
+        Component requestEditor = NodePropertiesDialog.createTextArea(properties, REQUEST);
 
         JRadioButton[] typeButtons = NodePropertiesDialog.createRadioButtons(
-                properties, "requestTypes", new String[]{"Plain Text", "Expression"});
+                properties, REQUEST_TYPES, new String[]{"Plain Text", "Expression"});
 
         JPanel types = new JPanel(new FlowLayout(FlowLayout.LEFT));
         for (JRadioButton button : typeButtons)
@@ -185,7 +201,7 @@ public class APINode extends Node
         typeButtons[0].setSelected(true);
 
         JRadioButton[] responseButtons = NodePropertiesDialog.createRadioButtons(
-                properties, "responseTypes", new String[]{"JSON"});
+                properties, RESPONSE_TYPES, rTypes);
         JPanel responses = new JPanel(new FlowLayout(FlowLayout.LEFT));
         for (JRadioButton button : responseButtons)
         {
@@ -235,7 +251,7 @@ public class APINode extends Node
         topPanel.add(inputPanel, BorderLayout.CENTER);
 
         final List<Slot> vars = this.getGraph().getAllVariables(Graph.LOCAL);
-        vars.removeIf(slot -> !slot.getType().getClass().getName().equals(StructType.class.getName()));
+        vars.removeIf(slot -> (!(slot.getType() instanceof StructType) && !(slot.getType() instanceof ListType)));
         String[] varNames = new String[vars.size()];
         for (int inx = 0; inx < vars.size(); inx++)
         {
@@ -253,7 +269,7 @@ public class APINode extends Node
         constraints.gridwidth = 3;
         constraints.anchor = GridBagConstraints.LINE_END;
         constraints.fill = GridBagConstraints.HORIZONTAL;
-        inputPanel.add(NodePropertiesDialog.createComboBox(properties, "returnVariable", varNames), constraints);
+        inputPanel.add(NodePropertiesDialog.createComboBox(properties, RETURN_VARIABLE, varNames), constraints);
 
         return topPanel;
     }
